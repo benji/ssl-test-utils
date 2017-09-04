@@ -84,7 +84,7 @@ public class SSLClientServerTest extends TestCase {
 	public void testSendMessageOnUntrustedSocket() throws Exception {
 		// Try failure scenario: when client doesn't trust server
 		SSLContext clientSSLContext = SSLContext.getInstance("TLS");
-		SSLTestsUtils.initSSLContext(clientSSLContext, null);
+		SSLTestsUtils.initSSLContext(clientSSLContext, null, null);
 		SSLSocketFactory ssf = clientSSLContext.getSocketFactory();
 		SSLSocket clientSslSocket = (SSLSocket) ssf.createSocket("localhost", serverPort);
 		try {

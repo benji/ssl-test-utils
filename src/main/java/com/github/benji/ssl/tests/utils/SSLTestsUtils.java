@@ -1,6 +1,5 @@
 package com.github.benji.ssl.tests.utils;
 
-import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
@@ -33,15 +32,15 @@ public class SSLTestsUtils {
 
 	public static String KEYSTORE_PASSWORD = "KeyStorePassword";
 
-	public static TrustManager[] createTrustManagers(TestCertificate... certs) throws Exception {
+	public static KeyStore createTrustStore(TestCertificate... certs) throws Exception {
 		KeyStore keyStore = KeyStore.getInstance("JKS");
 		keyStore.load(null, null);
-		for (TestCertificate cert : certs) {
-			keyStore.setCertificateEntry(cert.getAlias(), cert.getCertificate());
+		if (certs != null) {
+			for (TestCertificate cert : certs) {
+				keyStore.setCertificateEntry(cert.getAlias(), cert.getCertificate());
+			}
 		}
-		TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-		tmf.init(keyStore);
-		return tmf.getTrustManagers();
+		return keyStore;
 	}
 
 	public static KeyStore createKeyStore(TestCertificate cert) throws Exception {
@@ -55,11 +54,25 @@ public class SSLTestsUtils {
 		return keyStore;
 	}
 
+	public static TrustManager[] createTrustManagers(TestCertificate... certs) throws Exception {
+		KeyStore keyStore = createTrustStore(certs);
+
+		TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+		tmf.init(keyStore);
+		return tmf.getTrustManagers();
+	}
+
 	public static KeyManager[] createKeyManagers(TestCertificate cert) throws Exception {
 		KeyStore keyStore = createKeyStore(cert);
 		KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
 		kmf.init(keyStore, KEYSTORE_PASSWORD.toCharArray());
 		return kmf.getKeyManagers();
+	}
+
+	public static void initSSLContext(SSLContext context, TestCertificate keyCert,
+			TestCertificate... trutedCertificates) throws Exception {
+		context.init(createKeyManagers(keyCert),
+				trutedCertificates == null ? null : createTrustManagers(trutedCertificates), null);
 	}
 
 	public static TestCertificate createSelfSignedCertificate(String name) throws Exception {
@@ -74,7 +87,7 @@ public class SSLTestsUtils {
 		X500Principal dnName = new X500Principal("cn=example");
 
 		// add some options
-		certGen.setSerialNumber(BigInteger.valueOf(System.currentTimeMillis()));
+		certGen.setSerialNumber(java.math.BigInteger.valueOf(System.currentTimeMillis()));
 		certGen.setSubjectDN(new X509Name("dc=name"));
 		certGen.setIssuerDN(dnName); // use the same
 		// yesterday
@@ -98,11 +111,6 @@ public class SSLTestsUtils {
 		long stop = System.currentTimeMillis();
 		System.out.println("Generated cert in " + (stop - start) + "ms.");
 		return cert;
-	}
-
-	public static void initSSLContext(SSLContext context, TestCertificate keyCert,
-			TestCertificate... trutedCertificates) throws Exception {
-		context.init(createKeyManagers(keyCert), createTrustManagers(trutedCertificates), null);
 	}
 
 }
