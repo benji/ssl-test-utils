@@ -2,7 +2,8 @@
 Creates self signed certificates / keystores / truststores / SSLContexts for testing
 
 
-```<dependency>
+```
+<dependency>
   <groupId>com.github.benji</groupId>
   <artifactId>ssl-test-utils</artifactId>
   <version>1.0.0</version>
