@@ -1,7 +1,12 @@
 # ssl-test-utils
 Creates self signed certificates / keystores / truststores / SSLContexts for testing
 
-Uses Bouncy Castle
+
+```<dependency>
+  <groupId>com.github.benji</groupId>
+  <artifactId>ssl-test-utils</artifactId>
+  <version>1.0.0</version>
+</dependency>```
 
 Create self signed::
 ```
@@ -18,3 +23,5 @@ Create a SSLContext that uses that certificate:
 ```SSLContext sslContext = SSLContext.getInstance("TLS");
 SSLTestsUtils.initSSLContext(sslContext, cert, null);
 ```
+
+Uses Bouncy Castle.
