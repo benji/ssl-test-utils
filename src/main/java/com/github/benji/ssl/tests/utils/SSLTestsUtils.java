@@ -1,11 +1,10 @@
 package com.github.benji.ssl.tests.utils;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
+import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.X509Certificate;
@@ -16,9 +15,12 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 
+import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
@@ -29,6 +31,7 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 //import sun.security.x509.X500Name;
 
 public class SSLTestsUtils {
+	public static String Algorithm = "RSA";
 
 	static {
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
@@ -66,6 +69,19 @@ public class SSLTestsUtils {
 		return tmf.getTrustManagers();
 	}
 
+	public static X509TrustManager createX509TrustManager(TestCertificate... certs) throws Exception {
+		KeyStore keyStore = createTrustStore(certs);
+
+		TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+		tmf.init(keyStore);
+		for (TrustManager tm : tmf.getTrustManagers()) {
+			if (tm instanceof X509TrustManager) {
+				return (X509TrustManager) tm;
+			}
+		}
+		return null;
+	}
+
 	public static KeyManager[] createKeyManagers(TestCertificate cert) throws Exception {
 		KeyStore keyStore = createKeyStore(cert);
 		KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
@@ -80,33 +96,47 @@ public class SSLTestsUtils {
 	}
 
 	public static TestCertificate createSelfSignedCertificate(String name) throws Exception {
-		KeyPairGenerator kpGen = KeyPairGenerator.getInstance("RSA", "BC");
+		return createSelfSignedCertificate(name, null);
+	}
+
+	public static TestCertificate createSelfSignedCertificate(String name, TestCertificate caCert) throws Exception {
+		long start = System.currentTimeMillis();
+
+		KeyPairGenerator kpGen = KeyPairGenerator.getInstance(Algorithm, "BC");
 		kpGen.initialize(1024, new SecureRandom());
 		KeyPair pair = kpGen.generateKeyPair();
 
-		// Generate self-signed certificate
-		X500NameBuilder builder = new X500NameBuilder(BCStyle.INSTANCE);
-		builder.addRDN(BCStyle.CN, name);
+		X500NameBuilder x500NameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
+		x500NameBuilder.addRDN(BCStyle.CN, name);
+		X500Name x500Name = x500NameBuilder.build();
 
 		Date notBefore = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000);
 		Date notAfter = new Date(System.currentTimeMillis() + 10 * 365 * 24 * 60 * 60 * 1000);
 		BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
 
-		X509v3CertificateBuilder certGen = new JcaX509v3CertificateBuilder(builder.build(), serial, notBefore, notAfter,
-				builder.build(), pair.getPublic());
+		X500Name issuer = x500Name;
+
+		if (caCert != null) {
+			issuer = new X509CertificateHolder(caCert.getCertificate().getEncoded()).getSubject();
+		}
+
+		X509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(issuer, serial, notBefore, notAfter,
+				x500Name, pair.getPublic());
+
+		PrivateKey signingPrivateKey = caCert != null ? caCert.getPrivateKey() : pair.getPrivate();
+
 		ContentSigner sigGen = new JcaContentSignerBuilder("SHA256WithRSAEncryption").setProvider("BC")
-				.build(pair.getPrivate());
+				.build(signingPrivateKey);
 		X509Certificate x509Cert = new JcaX509CertificateConverter().setProvider("BC")
-				.getCertificate(certGen.build(sigGen));
-		x509Cert.checkValidity(new Date());
-		x509Cert.verify(x509Cert.getPublicKey());
+				.getCertificate(builder.build(sigGen));
 
 		TestCertificate cert = new TestCertificate();
 		cert.setCertificate(x509Cert);
 		cert.setName(name);
 		cert.setPrivateKey(pair.getPrivate());
 
+		long stop = System.currentTimeMillis();
+		System.out.println("Generated cert " + name + " in " + (stop - start) + "ms.");
 		return cert;
 	}
-
 }
