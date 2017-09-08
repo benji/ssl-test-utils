@@ -1,5 +1,8 @@
 package com.github.benji.ssl.tests.utils;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
@@ -13,13 +16,14 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-import javax.security.auth.x500.X500Principal;
 
-import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
-import org.bouncycastle.asn1.x509.KeyPurposeId;
-import org.bouncycastle.asn1.x509.X509Extensions;
-import org.bouncycastle.asn1.x509.X509Name;
-import org.bouncycastle.x509.X509V3CertificateGenerator;
+import org.bouncycastle.asn1.x500.X500NameBuilder;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.cert.X509v3CertificateBuilder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 //import sun.security.tools.keytool.CertAndKeyGen;
 //import sun.security.x509.X500Name;
@@ -76,40 +80,32 @@ public class SSLTestsUtils {
 	}
 
 	public static TestCertificate createSelfSignedCertificate(String name) throws Exception {
-		// generate a key pair
-		long start = System.currentTimeMillis();
-		KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA", "BC");
-		keyPairGenerator.initialize(1024, new SecureRandom());
-		KeyPair keyPair = keyPairGenerator.generateKeyPair();
+		KeyPairGenerator kpGen = KeyPairGenerator.getInstance("RSA", "BC");
+		kpGen.initialize(1024, new SecureRandom());
+		KeyPair pair = kpGen.generateKeyPair();
 
-		// build a certificate generator
-		X509V3CertificateGenerator certGen = new X509V3CertificateGenerator();
-		X500Principal dnName = new X500Principal("cn=example");
+		// Generate self-signed certificate
+		X500NameBuilder builder = new X500NameBuilder(BCStyle.INSTANCE);
+		builder.addRDN(BCStyle.CN, name);
 
-		// add some options
-		certGen.setSerialNumber(java.math.BigInteger.valueOf(System.currentTimeMillis()));
-		certGen.setSubjectDN(new X509Name("dc=name"));
-		certGen.setIssuerDN(dnName); // use the same
-		// yesterday
-		certGen.setNotBefore(new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000));
-		// in 2 years
-		certGen.setNotAfter(new Date(System.currentTimeMillis() + 2 * 365 * 24 * 60 * 60 * 1000));
-		certGen.setPublicKey(keyPair.getPublic());
-		certGen.setSignatureAlgorithm("SHA256WithRSAEncryption");
-		certGen.addExtension(X509Extensions.ExtendedKeyUsage, true,
-				new ExtendedKeyUsage(KeyPurposeId.id_kp_timeStamping));
+		Date notBefore = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000);
+		Date notAfter = new Date(System.currentTimeMillis() + 10 * 365 * 24 * 60 * 60 * 1000);
+		BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
 
-		// finally, sign the certificate with the private key of the same
-		// KeyPair
-		X509Certificate x509Cert = certGen.generate(keyPair.getPrivate(), "BC");
+		X509v3CertificateBuilder certGen = new JcaX509v3CertificateBuilder(builder.build(), serial, notBefore, notAfter,
+				builder.build(), pair.getPublic());
+		ContentSigner sigGen = new JcaContentSignerBuilder("SHA256WithRSAEncryption").setProvider("BC")
+				.build(pair.getPrivate());
+		X509Certificate x509Cert = new JcaX509CertificateConverter().setProvider("BC")
+				.getCertificate(certGen.build(sigGen));
+		x509Cert.checkValidity(new Date());
+		x509Cert.verify(x509Cert.getPublicKey());
 
 		TestCertificate cert = new TestCertificate();
 		cert.setCertificate(x509Cert);
 		cert.setName(name);
-		cert.setPrivateKey(keyPair.getPrivate());
+		cert.setPrivateKey(pair.getPrivate());
 
-		long stop = System.currentTimeMillis();
-		System.out.println("Generated cert in " + (stop - start) + "ms.");
 		return cert;
 	}
 
