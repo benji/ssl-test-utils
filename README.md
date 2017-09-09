@@ -2,8 +2,13 @@
 Creates self signed certificates / keystores / truststores / SSLContexts for testing
 
 
+```<repository>
+  <id>jitpack.io</id>
+  <url>https://jitpack.io</url>
+</repository>
 ```
-<dependency>
+
+```<dependency>
   <groupId>com.github.benji</groupId>
   <artifactId>ssl-test-utils</artifactId>
   <version>1.0.0</version>
