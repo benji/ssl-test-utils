@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -98,13 +99,13 @@ public class CRLTestsUtils {
 		return crls.toArray(new CRL[crls.size()]);
 	}
 
-	public static void writeCRL(OutputStream out, X509CRL crl) throws IOException {
+	public static void writeCRL(Writer writer, X509CRL crl) throws IOException {
 		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 		OutputStreamWriter oswriter = new OutputStreamWriter(byteArrayOutputStream);
-		JcaPEMWriter writer = new JcaPEMWriter(oswriter);
-		writer.writeObject(crl);
-		writer.close();
+		JcaPEMWriter pemWriter = new JcaPEMWriter(oswriter);
+		pemWriter.writeObject(crl);
+		pemWriter.close();
 		byte[] data = byteArrayOutputStream.toByteArray();
-		out.write(data);
+		writer.write(new String(data));
 	}
 }

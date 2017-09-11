@@ -6,6 +6,7 @@ import java.security.cert.X509Certificate;
 public class TestCertificate {
 
 	private String name;
+	private String password;
 	private String alias;
 	private X509Certificate certificate;
 	private PrivateKey privateKey;
@@ -24,6 +25,14 @@ public class TestCertificate {
 
 	public String getAlias() {
 		return alias != null ? alias : name;
+	}
+
+	public String getPassword() {
+		return password != null ? password : name;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
 	}
 
 	public void setName(String name) {

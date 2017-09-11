@@ -1,16 +1,22 @@
 package com.github.benji.ssl.tests.utils;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.CertificateException;
+import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
@@ -39,11 +45,11 @@ public class SSLTestsUtils {
 	public static String Algorithm = "RSA";
 	public static String SignatureAlgorithm = "SHA256WithRSAEncryption";
 
+	public static String KEYSTORE_PASSWORD = "KeyStorePassword";
+
 	static {
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 	}
-
-	public static String KEYSTORE_PASSWORD = "KeyStorePassword";
 
 	public static KeyStore createTrustStore(TestCertificate... certs) throws Exception {
 		KeyStore keyStore = KeyStore.getInstance(KeyStoreType);
@@ -56,15 +62,29 @@ public class SSLTestsUtils {
 		return keyStore;
 	}
 
-	public static KeyStore createKeyStore(TestCertificate cert) throws Exception {
+	public static KeyStore createKeyStore(TestCertificate cert, String password) throws Exception {
 		KeyStore keyStore = KeyStore.getInstance(KeyStoreType);
 		keyStore.load(null, null);
 		if (cert != null) {
 			X509Certificate[] chain = new X509Certificate[1];
 			chain[0] = cert.getCertificate();
-			keyStore.setKeyEntry(cert.getAlias(), cert.getPrivateKey(), KEYSTORE_PASSWORD.toCharArray(), chain);
+			keyStore.setKeyEntry(cert.getAlias(), cert.getPrivateKey(), cert.getPassword().toCharArray(), chain);
 		}
 		return keyStore;
+	}
+
+	public static KeyStore createBlankKeyStore() throws Exception {
+		KeyStore keyStore = KeyStore.getInstance(KeyStoreType);
+		keyStore.load(null, null);
+		return keyStore;
+	}
+
+	public static void addCertificate(KeyStore keyStore, TestCertificate cert) throws KeyStoreException {
+		if (cert != null) {
+			X509Certificate[] chain = new X509Certificate[1];
+			chain[0] = cert.getCertificate();
+			keyStore.setKeyEntry(cert.getAlias(), cert.getPrivateKey(), cert.getPassword().toCharArray(), chain);
+		}
 	}
 
 	public static TrustManager[] createTrustManagers(TestCertificate... certs) throws Exception {
@@ -92,8 +112,8 @@ public class SSLTestsUtils {
 		return null;
 	}
 
-	public static KeyManager[] createKeyManagers(TestCertificate cert) throws Exception {
-		KeyStore keyStore = createKeyStore(cert);
+	public static KeyManager[] createKeyManagers(TestCertificate cert, String ksPassword) throws Exception {
+		KeyStore keyStore = createKeyStore(cert, ksPassword);
 		KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
 		kmf.init(keyStore, KEYSTORE_PASSWORD.toCharArray());
 		return kmf.getKeyManagers();
@@ -101,7 +121,7 @@ public class SSLTestsUtils {
 
 	public static void initSSLContext(SSLContext context, TestCertificate keyCert,
 			TestCertificate... trutedCertificates) throws Exception {
-		context.init(createKeyManagers(keyCert),
+		context.init(createKeyManagers(keyCert, KEYSTORE_PASSWORD),
 				trutedCertificates == null ? null : createTrustManagers(trutedCertificates), null);
 	}
 
