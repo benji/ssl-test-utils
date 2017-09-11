@@ -1,5 +1,8 @@
 package com.github.benji.ssl.tests.utils;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -7,6 +10,7 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.Security;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
@@ -24,11 +28,10 @@ import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
-
-//import sun.security.tools.keytool.CertAndKeyGen;
-//import sun.security.x509.X500Name;
 
 public class SSLTestsUtils {
 	public static String KeyStoreType = "JKS";
@@ -148,6 +151,19 @@ public class SSLTestsUtils {
 		long stop = System.currentTimeMillis();
 		System.out.println("Generated cert " + name + " in " + (stop - start) + "ms.");
 		return cert;
+	}
+
+	public static X509Certificate readCertificate(Reader reader) throws IOException, CertificateException {
+		PEMParser parser = new PEMParser(reader);
+		X509CertificateHolder obj = (X509CertificateHolder) parser.readObject();
+		parser.close();
+		return new JcaX509CertificateConverter().setProvider("BC").getCertificate(obj);
+	}
+
+	public static void writeCertificate(Writer writer, X509Certificate cert) throws IOException {
+		try (JcaPEMWriter pemWriter = new JcaPEMWriter(writer)) {
+			pemWriter.writeObject(cert);
+		}
 	}
 
 }
