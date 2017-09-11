@@ -31,7 +31,10 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 //import sun.security.x509.X500Name;
 
 public class SSLTestsUtils {
+	public static String KeyStoreType = "JKS";
+	public static String Provider = "BC";
 	public static String Algorithm = "RSA";
+	public static String SignatureAlgorithm = "SHA256WithRSAEncryption";
 
 	static {
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
@@ -40,7 +43,7 @@ public class SSLTestsUtils {
 	public static String KEYSTORE_PASSWORD = "KeyStorePassword";
 
 	public static KeyStore createTrustStore(TestCertificate... certs) throws Exception {
-		KeyStore keyStore = KeyStore.getInstance("JKS");
+		KeyStore keyStore = KeyStore.getInstance(KeyStoreType);
 		keyStore.load(null, null);
 		if (certs != null) {
 			for (TestCertificate cert : certs) {
@@ -51,7 +54,7 @@ public class SSLTestsUtils {
 	}
 
 	public static KeyStore createKeyStore(TestCertificate cert) throws Exception {
-		KeyStore keyStore = KeyStore.getInstance("JKS");
+		KeyStore keyStore = KeyStore.getInstance(KeyStoreType);
 		keyStore.load(null, null);
 		if (cert != null) {
 			X509Certificate[] chain = new X509Certificate[1];
@@ -74,6 +77,10 @@ public class SSLTestsUtils {
 
 		TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
 		tmf.init(keyStore);
+		return getX509TrustManager(tmf);
+	}
+
+	public static X509TrustManager getX509TrustManager(TrustManagerFactory tmf) {
 		for (TrustManager tm : tmf.getTrustManagers()) {
 			if (tm instanceof X509TrustManager) {
 				return (X509TrustManager) tm;
@@ -99,21 +106,24 @@ public class SSLTestsUtils {
 		return createSelfSignedCertificate(name, null);
 	}
 
+	public static X500Name getX500Name(String name) {
+		X500NameBuilder x500NameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
+		x500NameBuilder.addRDN(BCStyle.CN, name);
+		return x500NameBuilder.build();
+	}
+
 	public static TestCertificate createSelfSignedCertificate(String name, TestCertificate caCert) throws Exception {
 		long start = System.currentTimeMillis();
 
-		KeyPairGenerator kpGen = KeyPairGenerator.getInstance(Algorithm, "BC");
+		KeyPairGenerator kpGen = KeyPairGenerator.getInstance(Algorithm, Provider);
 		kpGen.initialize(1024, new SecureRandom());
 		KeyPair pair = kpGen.generateKeyPair();
-
-		X500NameBuilder x500NameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
-		x500NameBuilder.addRDN(BCStyle.CN, name);
-		X500Name x500Name = x500NameBuilder.build();
 
 		Date notBefore = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000);
 		Date notAfter = new Date(System.currentTimeMillis() + 10 * 365 * 24 * 60 * 60 * 1000);
 		BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
 
+		X500Name x500Name = getX500Name(name);
 		X500Name issuer = x500Name;
 
 		if (caCert != null) {
@@ -125,9 +135,9 @@ public class SSLTestsUtils {
 
 		PrivateKey signingPrivateKey = caCert != null ? caCert.getPrivateKey() : pair.getPrivate();
 
-		ContentSigner sigGen = new JcaContentSignerBuilder("SHA256WithRSAEncryption").setProvider("BC")
+		ContentSigner sigGen = new JcaContentSignerBuilder(SignatureAlgorithm).setProvider(Provider)
 				.build(signingPrivateKey);
-		X509Certificate x509Cert = new JcaX509CertificateConverter().setProvider("BC")
+		X509Certificate x509Cert = new JcaX509CertificateConverter().setProvider(Provider)
 				.getCertificate(builder.build(sigGen));
 
 		TestCertificate cert = new TestCertificate();
@@ -139,4 +149,5 @@ public class SSLTestsUtils {
 		System.out.println("Generated cert " + name + " in " + (stop - start) + "ms.");
 		return cert;
 	}
+
 }
