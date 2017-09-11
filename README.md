@@ -17,23 +17,47 @@ Creates self signed certificates / keystores / truststores / SSLContexts for tes
 </dependency>
 ```
 
-Create self signed certificate:
-
+Example 1:
 ```
+// Create self signed certificate
 TestCertificate cert = SSLTestsUtils.createSelfSignedCertificate("Rick");
 X509Certificate x509Cert = cert.getCertificate();
+
+// Create a SSLContext that uses that certificate
+SSLTestsUtils.initSSLContext(serverSSLContext, cert, null);
+
+// Or create a SSLContext that trusts this certificate
+SSLTestsUtils.initSSLContext(clientSSLContext, null, cert);
 ```
 
-Create a SSLContext that trusts this certificate:
+Example 2:
 
-```SSLContext sslContext = SSLContext.getInstance("TLS");
-SSLTestsUtils.initSSLContext(sslContext, null, cert);
 ```
+// Create a Certificate Authority
+TestCertificate caCert = SSLTestsUtils.createSelfSignedCertificate("MyCustomCA");
+try (Writer writer = new FileWriter(new File(folder, "ca.pem"))) {
+	SSLTestsUtils.writeCertificate(writer, caCert.getCertificate());
+}
 
-Create a SSLContext that uses that certificate:
+// Create a Certificate
+TestCertificate vdsCert = SSLTestsUtils.createSelfSignedCertificate("benji.github.com", caCert);
+vdsCert.setAlias("benji");
+vdsCert.setPassword("changeit");
+try (Writer writer = new FileWriter(new File(folder, "server1.pem"))) {
+	SSLTestsUtils.writeCertificate(writer, vdsCert.getCertificate());
+}
 
-```SSLContext sslContext = SSLContext.getInstance("TLS");
-SSLTestsUtils.initSSLContext(sslContext, cert, null);
+// Create a Key Store
+try (OutputStream out = new FileOutputStream(new File(folder, "my.keystore"))) {
+	KeyStore ks = SSLTestsUtils.createKeyStore(vdsCert, "radiantlogic");
+	ks.store(out, "radiantlogic".toCharArray());
+}
+
+// Create a CRL
+X509CRL crl = CRLTestsUtils.createCRL(caCert, vdsCert);
+try (Writer writer = new FileWriter(new File(folder, "crl.pem"))) {
+	CRLTestsUtils.writeCRL(writer, crl);
+}
 ```
 
 Uses Bouncy Castle.
