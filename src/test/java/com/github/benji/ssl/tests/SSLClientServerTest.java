@@ -21,7 +21,7 @@ import junit.framework.TestCase;
 
 public class SSLClientServerTest extends TestCase {
 
-	TestCertificate cert;
+	TestCertificate caCert;
 	CountDownLatch successResetLatch = new CountDownLatch(1);
 	CountDownLatch exceptionResetLatch = new CountDownLatch(1);
 	int serverPort;
@@ -31,9 +31,11 @@ public class SSLClientServerTest extends TestCase {
 	protected void setUp() throws Exception {
 		super.setUp();
 
-		cert = SSLTestsUtils.createSelfSignedCertificate("TestServer");
+		caCert = SSLTestsUtils.createSelfSignedCertificate("TestServer");
+
+		TestCertificate serverCert = SSLTestsUtils.createSelfSignedCertificate("TestClient", caCert);
 		SSLContext serverSSLContext = SSLContext.getInstance("TLS");
-		SSLTestsUtils.initSSLContext(serverSSLContext, cert);
+		SSLTestsUtils.initSSLContext(serverSSLContext, serverCert);
 
 		SSLServerSocketFactory serverSocketFactory = serverSSLContext.getServerSocketFactory();
 		sslServerSocket = serverSocketFactory.createServerSocket(0);
@@ -64,10 +66,9 @@ public class SSLClientServerTest extends TestCase {
 		sslServerSocket.close();
 	}
 
-	public void testSendMessageOnTrustedSocket() throws Exception {
-		// creating SSL client
+	public void testSendMessageToTrustedServer() throws Exception {
 		SSLContext clientSSLContext = SSLContext.getInstance("TLS");
-		SSLTestsUtils.initSSLContext(clientSSLContext, null, cert);
+		SSLTestsUtils.initSSLContext(clientSSLContext, null, caCert);
 		SSLSocketFactory ssf = clientSSLContext.getSocketFactory();
 		SSLSocket clientSslSocket = (SSLSocket) ssf.createSocket("localhost", serverPort);
 		clientSslSocket.startHandshake();
@@ -81,7 +82,7 @@ public class SSLClientServerTest extends TestCase {
 		}
 	}
 
-	public void testSendMessageOnUntrustedSocket() throws Exception {
+	public void testSendUntrustedMessage() throws Exception {
 		// Try failure scenario: when client doesn't trust server
 		SSLContext clientSSLContext = SSLContext.getInstance("TLS");
 		SSLTestsUtils.initSSLContext(clientSSLContext, null, null);
