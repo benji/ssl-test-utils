@@ -1,5 +1,6 @@
 package com.github.benji.ssl.tests;
 
+import java.io.ByteArrayOutputStream;
 import java.security.KeyStore;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
@@ -41,6 +42,17 @@ public class CertificateRevocationListTest extends TestCase {
 		} catch (Exception e) {
 			System.out.println("Certifiate successfully revoked.");
 		}
+	}
+
+	public void testWriteCRL() throws Exception {
+		TestCertificate caCert = SSLTestsUtils.createSelfSignedCertificate("goku");
+		TestCertificate cert = SSLTestsUtils.createSelfSignedCertificate("gohan", caCert);
+
+		X509CRL crl = CRLTestsUtils.createCRL(caCert, cert);
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+		CRLTestsUtils.writeCRL(out, crl);
+		System.out.println(new String(out.toByteArray()));
 	}
 
 }

@@ -1,5 +1,10 @@
 package com.github.benji.ssl.tests.utils;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -8,12 +13,15 @@ import java.security.cert.CRL;
 import java.security.cert.CRLException;
 import java.security.cert.CertStore;
 import java.security.cert.CertStoreParameters;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.CollectionCertStoreParameters;
 import java.security.cert.PKIXBuilderParameters;
 import java.security.cert.X509CRL;
 import java.security.cert.X509CertSelector;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 
 import javax.net.ssl.CertPathTrustManagerParameters;
@@ -25,6 +33,8 @@ import org.bouncycastle.asn1.x509.CRLReason;
 import org.bouncycastle.cert.X509CRLHolder;
 import org.bouncycastle.cert.X509v2CRLBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CRLConverter;
+import org.bouncycastle.openssl.PEMWriter;
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -80,5 +90,21 @@ public class CRLTestsUtils {
 		ManagerFactoryParameters trustParams = new CertPathTrustManagerParameters(pkixParams);
 
 		tmf.init(trustParams);
+	}
+
+	public static CRL[] loadCRL(InputStream in) throws CertificateException, CRLException {
+		CertificateFactory cf = CertificateFactory.getInstance("X.509");
+		Collection<? extends CRL> crls = cf.generateCRLs(in);
+		return crls.toArray(new CRL[crls.size()]);
+	}
+
+	public static void writeCRL(OutputStream out, X509CRL crl) throws IOException {
+		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+		OutputStreamWriter oswriter = new OutputStreamWriter(byteArrayOutputStream);
+		JcaPEMWriter writer = new JcaPEMWriter(oswriter);
+		writer.writeObject(crl);
+		writer.close();
+		byte[] data = byteArrayOutputStream.toByteArray();
+		out.write(data);
 	}
 }
