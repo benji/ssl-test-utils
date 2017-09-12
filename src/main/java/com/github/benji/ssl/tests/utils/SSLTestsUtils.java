@@ -1,10 +1,6 @@
 package com.github.benji.ssl.tests.utils;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.math.BigInteger;
@@ -16,7 +12,6 @@ import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.CertificateException;
-import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
@@ -45,8 +40,6 @@ public class SSLTestsUtils {
 	public static String Algorithm = "RSA";
 	public static String SignatureAlgorithm = "SHA256WithRSAEncryption";
 
-	public static String KEYSTORE_PASSWORD = "KeyStorePassword";
-
 	static {
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 	}
@@ -62,9 +55,8 @@ public class SSLTestsUtils {
 		return keyStore;
 	}
 
-	public static KeyStore createKeyStore(TestCertificate cert, String password) throws Exception {
-		KeyStore keyStore = KeyStore.getInstance(KeyStoreType);
-		keyStore.load(null, null);
+	public static KeyStore createKeyStore(TestCertificate cert) throws Exception {
+		KeyStore keyStore = createBlankKeyStore();
 		if (cert != null) {
 			X509Certificate[] chain = new X509Certificate[1];
 			chain[0] = cert.getCertificate();
@@ -112,16 +104,16 @@ public class SSLTestsUtils {
 		return null;
 	}
 
-	public static KeyManager[] createKeyManagers(TestCertificate cert, String ksPassword) throws Exception {
-		KeyStore keyStore = createKeyStore(cert, ksPassword);
+	public static KeyManager[] createKeyManagers(TestCertificate cert) throws Exception {
+		KeyStore keyStore = createKeyStore(cert);
 		KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-		kmf.init(keyStore, KEYSTORE_PASSWORD.toCharArray());
+		kmf.init(keyStore, cert == null ? null : cert.getPassword().toCharArray());
 		return kmf.getKeyManagers();
 	}
 
 	public static void initSSLContext(SSLContext context, TestCertificate keyCert,
 			TestCertificate... trutedCertificates) throws Exception {
-		context.init(createKeyManagers(keyCert, KEYSTORE_PASSWORD),
+		context.init(createKeyManagers(keyCert),
 				trutedCertificates == null ? null : createTrustManagers(trutedCertificates), null);
 	}
 

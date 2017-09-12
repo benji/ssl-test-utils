@@ -32,8 +32,8 @@ public class Example2 {
 
 		// Create a Key Store
 		try (OutputStream out = new FileOutputStream(new File(folder, "my.keystore"))) {
-			KeyStore ks = SSLTestsUtils.createKeyStore(vdsCert, "radiantlogic");
-			ks.store(out, "radiantlogic".toCharArray());
+			KeyStore ks = SSLTestsUtils.createKeyStore(vdsCert);
+			ks.store(out, "changeit".toCharArray());
 		}
 
 		// Create a CRL
