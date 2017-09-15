@@ -13,7 +13,8 @@ Creates self signed certificates / keystores / truststores / SSLContexts for tes
 <dependency>
   <groupId>com.github.benji</groupId>
   <artifactId>ssl-test-utils</artifactId>
-  <version>1.0.0</version>
+  <scope>test</scope>
+  <version>2.0.0</version>
 </dependency>
 ```
 
